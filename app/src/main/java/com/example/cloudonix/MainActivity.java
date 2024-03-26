@@ -18,6 +18,8 @@ import com.example.cloudonix.databinding.ActivityMainBinding;
 import com.example.cloudonix.fragment.OverlayFragment;
 import com.example.cloudonix.network.SendRequest;
 
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'cloudonix' library on application startup.
@@ -49,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnSend = binding.buttonSendRequest;
         btnSend.setOnClickListener(getButtonClickListener());
+
+        Log.d("SHARK", "List of all addresses: "+getifaddrsAll());
     }
 
     private View.OnClickListener getButtonClickListener() {
@@ -157,4 +161,6 @@ public class MainActivity extends AppCompatActivity {
     public native String stringFromJNI();
 
     public native String getifaddrs();
+
+    public native List<String> getifaddrsAll();
 }

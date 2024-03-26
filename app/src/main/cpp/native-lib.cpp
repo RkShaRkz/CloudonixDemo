@@ -12,6 +12,9 @@
 #include <sstream>
 #include <vector>
 
+// Required for logging
+#include <android/log.h>
+
 /**
  * Utility method declarations here
  */
@@ -80,6 +83,145 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
     struct ifaddrs *ifaddr, *ifaddr_iterator;
     char addr[INET6_ADDRSTRLEN];
 
+    bool IPv6Available = false, IPv4Available = false;
+    std::string IPv4Fallback = "";
+
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs error");
+    }
+
+    for (ifaddr_iterator = ifaddr;
+         ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
+        __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Looking for IPv6 addresses...");
+        // Iterate IPv6 addresses first
+        if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET6)) {
+            struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) ifaddr_iterator->ifa_addr;   //TODO remove me
+            getnameinfo(
+                    ifaddr_iterator->ifa_addr,
+                    sizeof(struct sockaddr_in6),
+                    addr,
+                    sizeof(addr),
+                    NULL,
+                    0,
+                    NI_NUMERICHOST
+            );
+            std::string address(addr);
+            __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Checking address %s", addr);
+            if (isIPv6GlobalUnicast(address)) {
+                __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] IPv6 address found!");
+                IPv6Available = true;
+                retVal = env->NewStringUTF(address.c_str());
+                break;
+            }
+        }
+    }
+    __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Done looking for IPv6 addresses...");
+
+
+    // If we found nothing, keep looking...
+    if (retVal == nullptr) {
+        for (ifaddr_iterator = ifaddr;
+             ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
+            __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Looking for IPv4 addresses...");
+            // Iterate IPv4 public addresses second
+            if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
+                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
+                getnameinfo(
+                        ifaddr_iterator->ifa_addr,
+                        sizeof(struct sockaddr_in),
+                        addr,
+                        sizeof(addr),
+                        NULL,
+                        0,
+                        NI_NUMERICHOST
+                );
+                std::string address(addr);
+                __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Checking address %s", addr);
+                if (!isIPv4Private(address)) {
+                    __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] public IPv4 address found!");
+                    IPv4Available = true;
+                    retVal = env->NewStringUTF(address.c_str());
+                    break;
+                } else {
+                    __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] setting private address as IPv4Fallback %s", addr);
+                    IPv4Fallback = std::string(address);
+                }
+            }
+        }
+    }
+
+    // If we found nothing, keep looking...
+//    if (retVal == nullptr) {
+
+    bool noPublicAddrsFound = !IPv6Available && !IPv4Available;
+    __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] IPv6Available: %d\tIPv4Available: %d\tnoPublicAddrsFound: %d", IPv6Available, IPv4Available, noPublicAddrsFound);
+    if (noPublicAddrsFound) {
+        __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Fallback case! Looking for IPv4 addresses...");
+        //Fallback case, return any IPv4 address we found. So we can return the first one.
+        // reset the ifaddr
+//        if (getifaddrs(&ifaddr) == -1) {
+//            perror("getifaddrs error");
+//        }
+
+        for (ifaddr_iterator = ifaddr;
+             ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
+
+            if (retVal != nullptr) continue;
+
+            if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
+                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
+                getnameinfo(
+                        ifaddr_iterator->ifa_addr,
+                        sizeof(struct sockaddr_in6),
+                        addr,
+                        sizeof(addr),
+                        NULL,
+                        0,
+                        NI_NUMERICHOST
+                );
+
+                std::string address(addr);
+                __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Checking address %s", addr);
+                if (!IPv4Fallback.empty()) {
+                    retVal = env->NewStringUTF(IPv4Fallback.c_str());
+                } else if(retVal == nullptr) {
+                    __android_log_print(ANDROID_LOG_WARN, "SHARK", "[NATIVE] Assigning address %s for retVal", addr);
+                    retVal = env->NewStringUTF(address.c_str());
+                    break;
+                }
+
+//                if (retVal != nullptr) {
+//                    freeifaddrs(ifaddr);
+//                    return retVal;
+//                }
+            }
+        }
+
+//        retVal = env->NewStringUTF(IPv4Fallback.c_str());
+    }
+
+    // Cleanup ifaddrs
+    freeifaddrs(ifaddr);
+
+    return retVal;
+}
+
+JNICALL
+extern "C"
+jobject Java_com_example_cloudonix_MainActivity_getifaddrsAll(
+        JNIEnv *env,
+        jobject /* this */) {
+
+    // Create a vector of std::strings
+    std::vector<std::string> strings;
+
+    /**
+     * actual method here
+     */
+
+    struct ifaddrs *ifaddr, *ifaddr_iterator;
+    char addr[INET6_ADDRSTRLEN];
+
     if (getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs error");
     }
@@ -99,66 +241,61 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
                     NI_NUMERICHOST
             );
             std::string address(addr);
-            if (isIPv6GlobalUnicast(address)) {
-                retVal = env->NewStringUTF(address.c_str());
-                break;
-            }
+            strings.push_back(address);
         }
     }
 
     // If we found nothing, keep looking...
-    if (retVal == nullptr) {
-        for (ifaddr_iterator = ifaddr;
-             ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
-            // Iterate IPv4 public addresses second
-            if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
-                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
-                getnameinfo(
-                        ifaddr_iterator->ifa_addr,
-                        sizeof(struct sockaddr_in),
-                        addr,
-                        sizeof(addr),
-                        NULL,
-                        0,
-                        NI_NUMERICHOST
-                );
-                std::string address(addr);
-                if (!isIPv4Private(address)) {
-                    retVal = env->NewStringUTF(address.c_str());
-                    break;
-                }
-            }
+    for (ifaddr_iterator = ifaddr;
+         ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
+        // Iterate IPv4 public addresses second
+        if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
+            struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
+            getnameinfo(
+                    ifaddr_iterator->ifa_addr,
+                    sizeof(struct sockaddr_in),
+                    addr,
+                    sizeof(addr),
+                    NULL,
+                    0,
+                    NI_NUMERICHOST
+            );
+            std::string address(addr);
+            strings.push_back(address);
         }
     }
 
-    // If we found nothing, keep looking...
-    if (retVal == nullptr) {
-        //Fallback case, return any IPv4 address we found. So we can return the first one.
-        for (ifaddr_iterator = ifaddr;
-             ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
-            if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
-                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
-                getnameinfo(
-                        ifaddr_iterator->ifa_addr,
-                        sizeof(struct sockaddr_in6),
-                        addr,
-                        sizeof(addr),
-                        NULL,
-                        0,
-                        NI_NUMERICHOST
-                );
+    /**
+     * nothing below here
+     */
 
-                std::string address(addr);
-                retVal = env->NewStringUTF(address.c_str());
-            }
-        }
+//    strings.push_back("Hello");
+//    strings.push_back("from");
+//    strings.push_back("C++");
+
+    // Create a Java ArrayList object
+    jclass arrayListClass = env->FindClass("java/util/ArrayList");
+    jmethodID arrayListConstructor = env->GetMethodID(arrayListClass, "<init>", "()V");
+    jobject arrayList = env->NewObject(arrayListClass, arrayListConstructor);
+
+    // Get the ArrayList's add method
+    jmethodID addMethod = env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z");
+
+    // Add each string from the vector to the ArrayList
+    for (const auto &str: strings) {
+        jstring javaString = env->NewStringUTF(str.c_str());
+        env->CallBooleanMethod(arrayList, addMethod, javaString);
+        env->DeleteLocalRef(javaString);
     }
+
+
 
     // Cleanup ifaddrs
     freeifaddrs(ifaddr);
 
-    return retVal;
+    return arrayList;
 }
+
 
 bool isIPv6GlobalUnicast(const std::string &addr) {
     return addr.find("2000:") == 0;
