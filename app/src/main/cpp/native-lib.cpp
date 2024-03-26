@@ -27,6 +27,8 @@ bool isIPv4PrivateCase3(const std::string &addr);
 
 bool isIPv4PrivateLinkLocal(const std::string &addr);
 
+bool isIPv4LoopbackDevice(const std::string &addr);
+
 extern "C" JNIEXPORT jstring
 
 JNICALL
@@ -123,6 +125,10 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
                         NI_NUMERICHOST
                 );
                 std::string address(addr);
+
+                // We don't want to consider loopback 127.0.0.1
+                if(isIPv4LoopbackDevice(address)) continue;
+
                 if (!isIPv4Private(address)) {
                     retVal = env->NewStringUTF(address.c_str());
                     break;
@@ -149,6 +155,10 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
                 );
 
                 std::string address(addr);
+
+                // We don't want to consider loopback 127.0.0.1
+                if(isIPv4LoopbackDevice(address)) continue;
+
                 retVal = env->NewStringUTF(address.c_str());
             }
         }
@@ -253,4 +263,9 @@ bool isIPv4PrivateLinkLocal(const std::string &addr) {
     }
 
     return false;
+}
+
+bool isIPv4LoopbackDevice(const std::string &addr) {
+    // If the address starts with "127.0.0.1" it's the loopback device and should *never* be considered.
+    return addr.find("127.0.0.1") == 0;
 }
