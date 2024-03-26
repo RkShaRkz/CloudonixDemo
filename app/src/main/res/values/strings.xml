@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">CloudonixDemo</string>
+    <string name="send_address">Send address</string>
+    <string name="please_wait">Please wait...</string>
 </resources>
