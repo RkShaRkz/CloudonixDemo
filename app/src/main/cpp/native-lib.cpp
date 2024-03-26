@@ -88,7 +88,7 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
          ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
         // Iterate IPv6 addresses first
         if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET6)) {
-            struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) ifaddr_iterator->ifa_addr;
+            struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) ifaddr_iterator->ifa_addr;   //TODO remove me
             getnameinfo(
                     ifaddr_iterator->ifa_addr,
                     sizeof(struct sockaddr_in6),
@@ -111,9 +111,16 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
              ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
             // Iterate IPv4 public addresses second
             if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
-                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;
-                getnameinfo(ifaddr_iterator->ifa_addr, sizeof(struct sockaddr_in6), addr,
-                            sizeof(addr), NULL, 0, NI_NUMERICHOST);
+                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
+                getnameinfo(
+                        ifaddr_iterator->ifa_addr,
+                        sizeof(struct sockaddr_in),
+                        addr,
+                        sizeof(addr),
+                        NULL,
+                        0,
+                        NI_NUMERICHOST
+                );
                 std::string address(addr);
                 if (isIPv4Private(address)) {
                     retVal = env->NewStringUTF(address.c_str());
@@ -128,9 +135,16 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
         for (ifaddr_iterator = ifaddr;
              ifaddr_iterator != NULL; ifaddr_iterator = ifaddr_iterator->ifa_next) {
             if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET)) {
-                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;
-                getnameinfo(ifaddr_iterator->ifa_addr, sizeof(struct sockaddr_in6), addr,
-                            sizeof(addr), NULL, 0, NI_NUMERICHOST);
+                struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;   //TODO remove me
+                getnameinfo(
+                        ifaddr_iterator->ifa_addr,
+                        sizeof(struct sockaddr_in6),
+                        addr,
+                        sizeof(addr),
+                        NULL,
+                        0,
+                        NI_NUMERICHOST
+                );
 
                 std::string address(addr);
                 retVal = env->NewStringUTF(address.c_str());
@@ -229,7 +243,7 @@ bool isIPv4PrivateLinkLocal(const std::string &addr) {
     // i figure casting it to int and checking is kinda the same as strcmp()ing it so...
     int num = std::stoi(parts[0]);
     if (num == 169) {
-        // Check if the second part is 168
+        // Check if the second part is 254
         num = std::stoi(parts[1]);
         if (num == 254) {
             return true;
