@@ -122,7 +122,7 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
                         NI_NUMERICHOST
                 );
                 std::string address(addr);
-                if (isIPv4Private(address)) {
+                if (!isIPv4Private(address)) {
                     retVal = env->NewStringUTF(address.c_str());
                 }
             }
