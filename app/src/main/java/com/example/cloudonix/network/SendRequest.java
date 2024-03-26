@@ -30,7 +30,6 @@ public class SendRequest {
         ResponseResult retVal = null;
         try {
             // Send POST request
-//            boolean isNat = sendPostRequest(params.jsonString);
             retVal = sendPostRequest(params.jsonString);
             if (retVal.isSuccess()) {
                 System.out.println("Response succesful! Is NAT: " + retVal.isResponseOK());
@@ -90,18 +89,14 @@ public class SendRequest {
                     JSONObject json = new JSONObject(jsonResponse);
                     isResponseOK = json.optBoolean(JSON_KEYS.JSON_FIELD_NAT, false);
                 } catch (JSONException e) {
-//                    throw new RuntimeException(e);
                     Log.wtf("SHARK", "Exception happened during sending of POST request! Exception " + e);
                 }
                 // Assuming JSON response looks like {"nat":true} or {"nat":false}
-//                return jsonResponse.contains("\"nat\":true");
-//                return new ResponseResult(true, jsonResponse.contains("\"nat\":true"));
                 return new ResponseResult(true, isResponseOK);
             }
         } else {
             // Handle HTTP error response
             System.out.println("HTTP error: " + responseCode);
-//            return false;
             return new ResponseResult(false, null);
         }
     }
