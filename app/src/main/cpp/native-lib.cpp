@@ -82,7 +82,6 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
 
     if (getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs error");
-//        return -1;
     }
 
     for (ifaddr_iterator = ifaddr;
@@ -90,9 +89,15 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
         // Iterate IPv6 addresses first
         if ((ifaddr_iterator->ifa_addr) && (ifaddr_iterator->ifa_addr->sa_family == AF_INET6)) {
             struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) ifaddr_iterator->ifa_addr;
-            getnameinfo(ifaddr_iterator->ifa_addr, sizeof(struct sockaddr_in6), addr,
-                        sizeof(addr), NULL, 0, NI_NUMERICHOST);
-//            std::string address(ifaddr_iterator->ifa_addr->sa_data);
+            getnameinfo(
+                    ifaddr_iterator->ifa_addr,
+                    sizeof(struct sockaddr_in6),
+                    addr,
+                    sizeof(addr),
+                    NULL,
+                    0,
+                    NI_NUMERICHOST
+            );
             std::string address(addr);
             if (isIPv6GlobalUnicast(address)) {
                 retVal = env->NewStringUTF(address.c_str());
@@ -109,8 +114,6 @@ jstring Java_com_example_cloudonix_MainActivity_getifaddrs(
                 struct sockaddr_in *in = (struct sockaddr_in *) ifaddr_iterator->ifa_addr;
                 getnameinfo(ifaddr_iterator->ifa_addr, sizeof(struct sockaddr_in6), addr,
                             sizeof(addr), NULL, 0, NI_NUMERICHOST);
-//            sockaddr *tempaddr = ifaddr_iterator->ifa_addr;
-//            std::string address(tempaddr->sa_data);
                 std::string address(addr);
                 if (isIPv4Private(address)) {
                     retVal = env->NewStringUTF(address.c_str());
@@ -169,14 +172,6 @@ bool isIPv4PrivateCase2(const std::string &addr) {
     while (std::getline(iss, token, '.')) {
         parts.push_back(token);
     }
-
-    // Since we're here, we might as well do everything to validate the ipv4 IP address...
-    // which actually breaks the point of this method (checking if it's a private IP) so let's not.
-
-    // Check if the IP address has 4 parts
-//    if (parts.size() != 4) {
-//        return false;
-//    }
 
     // Check if the first part is equal to 172
     if (parts[0] == "172") {
