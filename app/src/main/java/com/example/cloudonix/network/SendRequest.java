@@ -38,6 +38,7 @@ public class SendRequest {
             }
         } catch (IOException e) {
             e.printStackTrace();
+            retVal = ResponseResult.unsuccessfulResult(e);
         }
 
         return retVal;
@@ -92,14 +93,16 @@ public class SendRequest {
                     Log.wtf("SHARK", "Exception happened during sending of POST request! Exception " + e);
                 }
                 // Assuming JSON response looks like {"nat":true} or {"nat":false}
-                return new ResponseResult(true, isResponseOK);
+                return ResponseResult.successfulResult(isResponseOK, jsonResponse);
             }
         } else {
             // Handle HTTP error response
             System.out.println("HTTP error: " + responseCode);
-            return new ResponseResult(false, null);
+            return ResponseResult.unsuccessfulResult(new UnknownHTTPError());
         }
     }
+
+    public static class UnknownHTTPError extends Exception {};
 
     public static class Params {
         private final String jsonString;
@@ -130,9 +133,23 @@ public class SendRequest {
         private final boolean sentOK;
         private final Boolean responseOK;
 
-        public ResponseResult(boolean sentOK, Boolean responseOK) {
+        private final String responseBody;
+
+        private final Exception faultReason;
+
+        public static ResponseResult successfulResult(boolean responseOk, String responseBody) {
+            return new ResponseResult(true, responseOk, responseBody, null);
+        }
+
+        public static ResponseResult unsuccessfulResult(Exception error) {
+            return new ResponseResult(false, null, null, error);
+        }
+
+        private ResponseResult(boolean sentOK, Boolean responseOK, String responseBody, Exception faultReason) {
             this.sentOK = sentOK;
             this.responseOK = responseOK;
+            this.responseBody = responseBody;
+            this.faultReason = faultReason;
         }
 
         public boolean isSuccess() {
@@ -153,6 +170,40 @@ public class SendRequest {
                 throw new IllegalStateException("Cannot get response from a failed response");
             } else {
                 return responseOK;
+            }
+        }
+
+        /**
+         * There are no responses for failed requests, so always check {@link ResponseResult#isSuccess()}
+         * before calling this.
+         * <p>
+         * If the {@link #isSuccess()} returns <i>false</i>, this method throws an {@link IllegalStateException}
+         * Otherwise, it returns the string representing the json body from the response.
+         *
+         * @return whether the {@link SendRequest} contained an OK response or not.
+         */
+        public String getResponseBody() {
+            if (!sentOK) {
+                throw new IllegalStateException("Cannot get response body from a failed response");
+            } else {
+                return responseBody;
+            }
+        }
+
+        /**
+         * There are no fault reasons for successful requests, so always check {@link ResponseResult#isSuccess()}
+         * before calling this.
+         * <p>
+         * If the {@link #isSuccess()} returns <i>true</i>, this method throws an {@link IllegalStateException}
+         * Otherwise, it returns whichever exception happened during transmission.
+         *
+         * @return whichever {@link Exception{} the {@link SendRequest} encountered during sending.
+         */
+        public Exception getFaultReason() {
+            if (sentOK) {
+                throw new IllegalStateException("Cannot get fault reason from successful responses");
+            } else {
+                return faultReason;
             }
         }
 
