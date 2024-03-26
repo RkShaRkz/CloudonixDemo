@@ -78,6 +78,11 @@ public class MainActivity extends AppCompatActivity {
                         v.setClickable(true);
                         //TODO in case the overlay was opened, close it here
                         Toast.makeText(getBaseContext(), "Result was success ? "+responseResult.isSuccess(), Toast.LENGTH_SHORT).show();
+                        if (responseResult.isSuccess()) {
+                            Log.d("SHARK", "responseBody was: " + responseResult.getResponseBody());
+                        } else {
+                            Log.d("SHARK", "request failed due to: "+responseResult.getFaultReason());
+                        }
                     }
                 }.execute();
 
